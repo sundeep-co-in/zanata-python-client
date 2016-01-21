@@ -1,5 +1,5 @@
-#vim:set et sts=4 sw=4: 
-# 
+# vim:set et sts=4 sw=4:
+#
 # Zanata Python Client
 #
 # Copyright (c) 2011 Jian Ni <jni@redhat.com>
@@ -17,42 +17,33 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the
-# Free Software Foundation, Inc., 59 Temple Place, Suite 330,
-# Boston, MA  02111-1307  USA
+# Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA  02110-1301, USA.
 
 
 __all__ = (
-        "GlossaryService",
-   )
+    "GlossaryService",
+)
 
-try:
-    import json
-except ImportError:
-    import simplejson as json
-from rest.client import RestClient
-from error import UnAuthorizedException
-from error import BadRequestBodyException
-from error import UnavailableServiceError
-from error import UnexpectedStatusException   
 
-class GlossaryService:
-    def __init__(self, base_url):
-        self.restclient = RestClient(base_url)
+from .service import Service
 
-    def commit_glossary(self, username, apikey, resources):
-        headers = {}
-        headers['X-Auth-User'] = username
-        headers['X-Auth-Token'] = apikey        
-        
-        res, content = self.restclient.request_put('/seam/resource/restv1/glossary', args=resources, headers=headers)
-       
-        if res['status'] == '201':
-            return True
-        elif res['status'] == '401':
-            raise UnAuthorizedException('Error 401', 'This operation is not authorized, please check username and apikey')
-        elif res['status'] == '400':
-            raise BadRequestBodyException('Error 400', content)
-        elif res['status'] == '503':
-            raise UnavailableServiceError('Error 503', 'Service Temporarily Unavailable')
-        else:
-            raise UnexpectedStatusException('Error', 'Unexpected Status, failed to push')
+
+class GlossaryService(Service):
+    _fields = ['base_url', 'http_headers']
+
+    def __init__(self, *args, **kargs):
+        super(GlossaryService, self).__init__(*args, **kargs)
+
+    def commit_glossary(self, resources):
+        res, content = self.restclient.process_request(
+            'commit_glossary', body=resources, headers=self.http_headers
+        )
+        return self.messages(res, content)
+
+    def delete(self, lang=None):
+        ext = '/' + lang if lang else ''
+        res, content = self.restclient.process_request(
+            'delete_glossary', headers=self.http_headers, extension=ext
+        )
+        return self.messages(res, content)

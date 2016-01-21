@@ -1,5 +1,5 @@
-#vim:set et sts=4 sw=4: 
-# 
+# vim:set et sts=4 sw=4:
+#
 # Zanata Python Client
 #
 # Copyright (c) 2011 Jian Ni <jni@redhat.com>
@@ -17,34 +17,29 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the
-# Free Software Foundation, Inc., 59 Temple Place, Suite 330,
-# Boston, MA  02111-1307  USA
+# Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA  02110-1301, USA.
 
 
 __all__ = (
-        "VersionService",
-   )
+    "VersionService",
+)
 
-try:
-    import json
-except ImportError:
-    import simplejson as json
-from rest.client import RestClient
-from error import UnAvaliableResourceException
-from error import UnavailableServiceError
+from .service import Service
 
 
-class VersionService:
-    def __init__(self, base_url):
-        self.restclient = RestClient(base_url)
-        
+class VersionService(Service):
+    _fields = ['base_url', 'http_headers']
+
+    def __init__(self, *args, **kargs):
+        super(VersionService, self).__init__(*args, **kargs)
+
+    def disable_ssl_cert_validation(self):
+        self.restclient.disable_ssl_cert_validation()
+
     def get_server_version(self):
-        res, content = self.restclient.request_version('/seam/resource/restv1/version')
-        
-        if res['status'] == '200' or res['status'] == '304':
-            version = json.loads(content)
-            return version
-        elif res['status'] == '404':
-            raise UnAvaliableResourceException('Error 404', 'The requested resource is not available')
-        elif res['status'] == '503':
-            raise UnavailableServiceError('Error 503', 'Service Temporarily Unavailable')
+        res, content = self.restclient.process_request(
+            'server_version',
+            headers=self.http_headers
+        )
+        return self.messages(res, content)

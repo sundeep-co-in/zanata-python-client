@@ -1,4 +1,4 @@
-# 
+#
 # Zanata Python Client
 #
 # Copyright (c) 2011 Jian Ni <jni@redhat.com>
@@ -16,35 +16,38 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the
-# Free Software Foundation, Inc., 59 Temple Place, Suite 330,
-# Boston, MA  02111-1307  USA
+# Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA  02110-1301, USA.
 
 __all__ = (
-        "ZanataConfig",
-    )
+    "ZanataConfig",
+)
 
-import ConfigParser
 import os.path
-from zanatalib.logger import Logger
-from xml.dom import minidom 
+from .zanatalib.logger import Logger
+from xml.dom import minidom
+try:
+    from ConfigParser import ConfigParser
+except ImportError:
+    from configparser import ConfigParser
 
-project_config = {'project_url':'', 'project_id':'', 'project_version':'', 'project_type':'', 'locale_map':{}}
+project_config = {}
 
 
 class ZanataConfig:
     def __init__(self):
         self.configparser = ""
         self._config = ""
-        
+
     def set_userconfig(self, path):
-        self.configparser = ConfigParser.ConfigParser()
+        self.configparser = ConfigParser()
         self._config = self.configparser.read(['zanata.ini', path])
-        
+
     def get_server(self, url):
         if self._config:
             try:
                 item_list = self.configparser.items('servers')
-                server = ""                
+                server = ""
                 for item in item_list:
                     if item[1][-1] == "/":
                         address = item[1][:-1]
@@ -54,17 +57,31 @@ class ZanataConfig:
                     if url == address:
                         server = item[0][:-4]
                 return server
-            except ConfigParser.NoOptionError, ConfigParser.NoSectionError:
+            except (ConfigParser.NoOptionError, ConfigParser.NoSectionError):
                 raise
         else:
-            return None       
-             
+            return None
+
+    def get_servers(self):
+        if self._config:
+            try:
+                servers = []
+                item_list = self.configparser.items('servers')
+                for item in item_list:
+                    if 'url' in item[0]:
+                        servers.append(item[1])
+                return servers
+            except (ConfigParser.NoOptionError, ConfigParser.NoSectionError):
+                raise
+        else:
+            return None
+
     def get_config_value(self, name, section, server):
         if self._config:
             try:
-                value = self.configparser.get(section, server+'.'+name)
+                value = self.configparser.get(section, server + '.' + name)
                 return value
-            except ConfigParser.NoOptionError, ConfigParser.NoSectionError:
+            except (ConfigParser.NoOptionError, ConfigParser.NoSectionError):
                 raise
         else:
             return None
@@ -78,62 +95,58 @@ class ZanataConfig:
 
         xmldoc = minidom.parse(filename)
 
-        #Read the project url
+        # Read the project url
         if xmldoc.getElementsByTagName("url"):
             node = xmldoc.getElementsByTagName("url")[0]
-            rc = ""
+            project_config['url'] = getCombinedTextChildren(node)
 
-            for node in node.childNodes:
-                if node.nodeType in ( node.TEXT_NODE, node.CDATA_SECTION_NODE):
-                    rc = rc + node.data
-            project_config['project_url'] = rc
-
-        #Read the project id
+        # Read the project id
         if xmldoc.getElementsByTagName("project"):
             node = xmldoc.getElementsByTagName("project")[0]
-            rc = ""
+            project_config['project_id'] = getCombinedTextChildren(node)
 
-            for node in node.childNodes:
-                if node.nodeType in ( node.TEXT_NODE, node.CDATA_SECTION_NODE):
-                    rc = rc + node.data
-            project_config['project_id'] = rc
-        
-        #Read the project-version
+        # Read the project-version
         if xmldoc.getElementsByTagName("project-version"):
             node = xmldoc.getElementsByTagName("project-version")[0]
-            rc = ""
-        
-            for node in node.childNodes:
-                if node.nodeType in ( node.TEXT_NODE, node.CDATA_SECTION_NODE):
-                    rc = rc + node.data
-            project_config['project_version'] = rc
+            project_config['project_version'] = getCombinedTextChildren(node)
 
-        #Read the project-type
+        # Read the project-type
         if xmldoc.getElementsByTagName("project-type"):
             node = xmldoc.getElementsByTagName("project-type")[0]
-            rc = ""
-        
-            for node in node.childNodes:
-                if node.nodeType in ( node.TEXT_NODE, node.CDATA_SECTION_NODE):
-                    rc = rc + node.data
-            project_config['project_type'] = rc
+            project_config['project_type'] = getCombinedTextChildren(node)
 
-        #Read the locale map
+        # Read the locale map
         if xmldoc.getElementsByTagName("locales"):
             locales = xmldoc.getElementsByTagName("locales")[0]
             localelist = locales.getElementsByTagName("locale")
+            project_config['locale_map'] = {}
 
             for locale in localelist:
                 for node in locale.childNodes:
                     if node.nodeType == node.TEXT_NODE:
                         if locale.getAttribute("map-from"):
-                            locale_map = {str(locale.getAttribute("map-from")):str(node.data)}
-                            project_config['locale_map'].update(locale_map)
+                            locale_map = {str(locale.getAttribute("map-from")): str(node.data)}
                         else:
-                            locale_map = {str(node.data):str(node.data)}
-                            project_config['locale_map'].update(locale_map)
-        
-        return project_config
-    
+                            locale_map = {str(node.data): str(node.data)}
+                        project_config['locale_map'].update(locale_map)
+
+        # Read <src-dir> and <trans-dir>
+        if xmldoc.getElementsByTagName("src-dir"):
+            node = xmldoc.getElementsByTagName("src-dir")[0]
+            project_config['srcdir'] = getCombinedTextChildren(node)
+        if xmldoc.getElementsByTagName("trans-dir"):
+            node = xmldoc.getElementsByTagName("trans-dir")[0]
+            project_config['transdir'] = getCombinedTextChildren(node)
+
+        return dict((node, value.strip() if isinstance(value, str) else value)
+                    for node, value in project_config.items() if value)
 
 
+def getCombinedTextChildren(node):
+    """Combine all TEXT_NODE and CDATA_SECTION_NODE children"""
+
+    rc = ""
+    for node in node.childNodes:
+        if node.nodeType in (node.TEXT_NODE, node.CDATA_SECTION_NODE):
+            rc = rc + node.data
+    return rc

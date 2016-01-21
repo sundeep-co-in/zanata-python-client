@@ -1,4 +1,4 @@
-# 
+# vim: set et sts=4 sw=4:
 # Zanata Python Client
 #
 # Copyright (c) 2011 Jian Ni <jni@redhat.com>
@@ -16,103 +16,93 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the
-# Free Software Foundation, Inc., 59 Temple Place, Suite 330,
-# Boston, MA  02111-1307  USA
+# Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA  02110-1301, USA.
 
 __all__ = (
-        "RestClient",
-    )  
+    "RestClient",
+)
 
-import urlparse
-import urllib
-import base64
-import warnings 
-import socket
+try:
+    from urllib.parse import urlparse
+except ImportError:
+    from urlparse import urlparse
 import sys
-import platform
-import exceptions
 import warnings
-warnings.simplefilter("ignore",DeprecationWarning)
+from io import StringIO
+warnings.simplefilter("ignore", DeprecationWarning)
 import httplib2
 
+from .config import ServiceConfig
+
+
 class RestClient(object):
-    def __init__(self, base_url):
+    def __init__(self, base_url, disable_ssl_certificate_validation=True):
         self.base_url = base_url
-        self.url = urlparse.urlparse(base_url)
-    
-    def request_get(self, resource, args = None, body = None, headers = {}, extension = None):        
-        return self.request(resource, "get", args, body, headers, extension)
-    
-    def request_post(self, resource, args = None, body = None, headers = {}, extension = None):
-        return self.request(resource, "post", args, body, headers, extension)
-            
-    def request_put(self, resource, args = None, body = None, headers = {}, extension = None):
-        return self.request(resource, "put", args, body, headers, extension)
+        self.url = urlparse(base_url)
+        self.http_client = httplib2.Http(disable_ssl_certificate_validation=True)
 
-    def request_delete(self, resource, args = None, body = None, headers = {}, extension = None):
-        return self.request(resource, "delete", args, body, headers, extension)
-    
-    def request(self, resource, method = "get", args = None, body = None, headers = {}, extension = None):
-        headers['Accept'] = 'application/json'
-        http = httplib2.Http()
+    def disable_ssl_cert_validation(self):
+        params = dir(self.http_client)
+        if 'disable_ssl_certificate_validation' in params:
+            self.http_client.disable_ssl_certificate_validation = True
 
-        if args:
-            if method == "put" or method == "post":
-                headers['Content-Type'] = 'application/json'
-                body = args
-        
+    def request(self, resource, method="get", body=None, headers=None, extension=None):
         if extension:
-            resource = "%s%s%s"%(self.base_url, resource, extension)
-        else:
-            resource = "%s%s"%(self.base_url, resource)
-       
+            resource = resource + extension
+
+        if body is not None:
+            thelen = str(len(body))
+            headers['Content-Length'] = thelen
+            body = StringIO(body)
+
         try:
-            response, content = http.request(resource, method.upper(), body, headers=headers)
+            response, content = self.http_client.request(resource, method.upper(), body, headers=headers)
             if response.previous is not None:
                 if response.previous.status == 301 or response.previous.status == 302:
-                    new_url= response.previous['-x-permanent-redirect-url'].split(resource)[0]
-                    print "HTTP redirect: redirect to %s, please update the server URL to new URL"%new_url
+                    if '-x-permanent-redirect-url' in response.previous:
+                        new_url = response.previous['-x-permanent-redirect-url'][:-len(resource)]
+                    elif 'location' in response.previous:
+                        new_url = response.previous['location']
+                    if new_url:
+                        print("\nRedirecting to: %s" % '{uri.scheme}://{uri.netloc}/'.format(uri=urlparse(new_url)))
+                        print("HTTP Redirect: Please update the Server URL.")
+                        response, content = self.http_client.request(new_url, method.upper(), body, headers=headers)
             return (response, content.decode("UTF-8"))
-        except httplib2.ServerNotFoundError, e:
-            print "error: %s, Maybe the flies sever is down?"%e
+        except httplib2.ServerNotFoundError as e:
+            print("error: %s, Maybe the Zanata server is down?" % e)
             sys.exit(2)
-        except httplib2.HttpLib2Error, e:
-            print "error: %s"%e
+        except httplib2.HttpLib2Error as e:
+            print("error: %s" % e)
             sys.exit(2)
-        except Exception, e:
+        except MemoryError as e:
+            print("error: The file is too big to process")
+        except Exception as e:
             value = str(e).rstrip()
             if value == 'a float is required':
-                print "error: Error happens when processing https"
+                print("error: Error happens when processing https")
                 if sys.version_info[:2] == (2, 6):
-                    print "If version of python-httplib2 < 0.4.0, please use the patch in http://code.google.com/p/httplib2/issues/detail?id=39"
+                    print("If version of python-httplib2 < 0.4.0, "
+                          "please use the patch in http://code.google.com/p/httplib2/issues/detail?id=39")
                 sys.exit(2)
-            else:            
-                print "error: %s"%e
+            else:
+                print("error: %s" % e)
                 sys.exit(2)
 
-    def request_version(self, resource):
-        http = httplib2.Http()
-        try:
-            response, content = http.request("%s%s" % (self.base_url, resource), "GET")
-            if response.previous is not None:
-                if response.previous.status == 301 or response.previous.status == 302:
-                    new_url= response.previous['-x-permanent-redirect-url'].split(resource)[0]
-                    print "HTTP redirect: redirect to %s, please update the server URL to new URL"%new_url
-            return (response, content.decode("UTF-8"))
-        except httplib2.ServerNotFoundError, e:
-            print "error: %s, Maybe the Zanata/Flies sever is down?"%e
-            sys.exit(2)
-        except httplib2.HttpLib2Error, e:
-            print "error: %s"%e
-            sys.exit(2)
-        except Exception, e:
-            value = str(e).rstrip()
-            if value == 'a float is required':
-                print "error: Error happens when processing https"
-                if sys.version_info[:2] == (2, 6):
-                    print "If version of python-httplib2 < 0.4.0, please use the patch in http://code.google.com/p/httplib2/issues/detail?id=39"
-                sys.exit(2)
-            else:            
-                print "error: %s"%e
-                sys.exit(2)
- 
+    def process_request(self, service_name, *args, **kwargs):
+        headers = kwargs['headers'] if 'headers' in kwargs else {}
+        body = kwargs['body'] if 'body' in kwargs else None
+        extension = kwargs['extension'] if 'extension' in kwargs else None
+        service_details = ServiceConfig(service_name)
+        # set headers
+        if hasattr(service_details, 'response_media_type') and service_details.response_media_type:
+            headers['Accept'] = service_details.response_media_type
+        if hasattr(service_details, 'request_media_type') and service_details.request_media_type and body:
+            headers['Content-Type'] = service_details.request_media_type
+        # set resource
+        resource = (
+            service_details.resource.format(**dict(zip(service_details.path_params, args)))
+            if args else service_details.resource
+        )
+        # initiate service call
+        return self.request(self.base_url + resource, service_details.http_method, body, headers, extension)

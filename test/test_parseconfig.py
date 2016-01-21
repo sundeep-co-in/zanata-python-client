@@ -1,5 +1,5 @@
-# 
-# Flies Python Client
+#
+# Zanata Python Client
 #
 # Copyright (c) 2010 Jian Ni <jni@redhat.com>
 # Copyright (c) 2010 Red Hat, Inc.
@@ -16,16 +16,17 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the
-# Free Software Foundation, Inc., 59 Temple Place, Suite 330,
-# Boston, MA  02111-1307  USA
+# Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA  02110-1301, USA.
 
 all__ = (
-            "ConfigTest",
-        )
+    "ConfigTest",
+)
 
 import unittest
-import sys, os
-sys.path.insert(0, os.path.abspath(__file__+"/../.."))
+import sys
+import os
+sys.path.insert(0, os.path.abspath(__file__ + "/../.."))
 
 from zanataclient.parseconfig import ZanataConfig
 
@@ -35,20 +36,24 @@ class ConfigTest(unittest.TestCase):
         self.config = ZanataConfig()
 
     def test_user_config(self):
-        self.config.set_userconfig("./test/testfiles/zanata.ini")
-        server = self.config.get_server("http://localhost:8080/flies")
+        self.config.set_userconfig("./testfiles/zanata.ini")
+        server = self.config.get_server("http://localhost:8080/zanata")
         user_name = self.config.get_config_value("username", 'servers', server)
-        apikey = self.config.get_config_value("key", 'servers',server)
-        self.assertEqual(server, "local") 
+        apikey = self.config.get_config_value("key", 'servers', server)
+        servers = self.config.get_servers()
+        self.assertTrue('http://localhost:8080/zanata' in servers)
+        self.assertEqual(server, "local")
         self.assertEqual(user_name, "username")
         self.assertEqual(apikey, "key")
-  
+
     def test_project_config(self):
-        project_config = self.config.read_project_config("./test/testfiles/zanata.xml")
-        self.assertEqual(project_config['project_url'], "http://localhost:8080/zanata/")
+        project_config = self.config.read_project_config("./testfiles/zanata.xml")
+        self.assertEqual(project_config['url'], "http://localhost:8080/zanata/")
         self.assertEqual(project_config['project_id'], "test-project")
         self.assertEqual(project_config['project_version'], "1.0")
         self.assertEqual(project_config['locale_map'], {"zh-CN": "zh-Hans"})
+        self.assertEqual(project_config['srcdir'], "/home/user/project/source")
+        self.assertEqual(project_config['transdir'], "/home/user/project/target")
 
 if __name__ == '__main__':
     unittest.main()

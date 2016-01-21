@@ -1,5 +1,5 @@
-#vim:set et sts=4 sw=4: 
-# 
+# vim:set et sts=4 sw=4:
+#
 # Zanata Python Client
 #
 # Copyright (c) 2011 Jian Ni <jni@redhat.com>
@@ -17,70 +17,66 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the
-# Free Software Foundation, Inc., 59 Temple Place, Suite 330,
-# Boston, MA  02111-1307  USA
+# Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA  02110-1301, USA.
 
 __all__ = (
-        "ProjectService", 
-   )
-
-try:
-    import json
-except ImportError:
-    import simplejson as json
-from rest.client import RestClient
-from project import Project
-from project import Iteration
-from error import ProjectExistException
-from error import NoSuchProjectException
-from error import UnAuthorizedException
-from error import BadRequestException
-from error import NotAllowedException
+    "ProjectService",
+)
 
 
-class ProjectService:
+from .projectutils import Project
+from .projectutils import Iteration
+from .service import Service
+
+
+class ProjectService(Service):
     """
-    Provides services to interact with Project, handle operaions of list, create and retrieve Project Resources  
+    Provides services to interact with Project, handle operaions of list, create and retrieve Project Resources
     """
-    def __init__(self, base_url, usrname, apikey):
-        self.restclient = RestClient(base_url)
-        self.iterations = IterationService(base_url, usrname, apikey)
-        self.username = usrname
-        self.apikey = apikey
+    _fields = ['base_url', 'http_headers']
+
+    def __init__(self, *args, **kargs):
+        super(ProjectService, self).__init__(*args, **kargs)
+        self.iterations = IterationService(
+            self.base_url, self.http_headers
+        )
+
+    def disable_ssl_cert_validation(self):
+        self.restclient.disable_ssl_cert_validation()
+        self.iterations.disable_ssl_cert_validation()
 
     def list(self):
         """
-        List the Project Resources on the Flies server
+        List the Project Resources on the Zanata server
         @return: list of Project object
         """
-        res, content = self.restclient.request_get('/seam/resource/restv1/projects')
-         
-        if res['status'] == '200':
-            projects = []
-            projects_json = json.loads(content)
-            
-            for p in projects_json:
-                projects.append(Project(p))
-            return projects
-       
+        res, content = self.restclient.process_request('list_projects',
+                                                       headers=self.http_headers)
+        projects_json = self.messages(res, content)
+        projects = [Project(p) for p in projects_json]
+        return projects
+
     def get(self, projectid):
         """
-        Retrieve a specified Project Resource on Flies server
+        Retrieve a specified Project Resource on Zanata server
         @param projectid: Id of Project Resource
         @return: Project object
         @raise NoSuchProjectException:
-        """     
-        res, content = self.restclient.request_get('/seam/resource/restv1/projects/p/%s'%projectid)
-        if res['status'] == '200' or res['status'] == '304':
-            project = Project(json.loads(content))
-            project.set_iteration(self.iterations)
-            return project
-        elif res['status'] == '404':
-            raise NoSuchProjectException('Error 404', content) 
+        """
+        res, content = self.restclient.process_request('list_project', projectid,
+                                                       headers=self.http_headers)
+        server_return = self.messages(res, content)
+        if 'status' in server_return:
+            if server_return['status'] == "Retired":
+                print("Warning: The project %s is retired!" % projectid)
+        project = Project(server_return)
+        project.set_iteration(self.iterations)
+        return project
 
     def create(self, project):
         """
-        Create a Project Resource on Flies Server
+        Create a Project Resource on Zanata Server
         @param project: Project object
         @return: Success if status of response is 201
         @raise ProjectExistException:
@@ -88,57 +84,52 @@ class ProjectService:
         @raise UnAuthorizedException:
         @raise BadRequestException:
         """
-        headers = {}
-        headers['X-Auth-User'] = self.username
-        headers['X-Auth-Token'] = self.apikey
-        body ='''{"name":"%s","id":"%s","description":"%s","type":"IterationProject"}'''%(project.name,project.id,project.desc)
-        res, content = self.restclient.request_put('/seam/resource/restv1/projects/p/%s'%project.id, args=body, headers=headers)
-        
-        if res['status'] == '201':
-            return "Success"
-        elif res['status'] == '200':
-            raise ProjectExistException('Status 200', "The project is already exist on server")
-        elif res['status'] == '404':
-            raise NoSuchProjectException('Error 404', content)
-        elif res['status'] == '401':
-            raise UnAuthorizedException('Error 401', 'This operation is not authorized, please check username and apikey')
-        elif res['status'] == '400':
-            raise BadRequestException('Error 400', content)
-                    
+        body = '''{"name":"%s","id":"%s","description":"%s","type":"%s"}''' % (
+            project.name, project.id, project.desc, project.type
+        )
+        res, content = self.restclient.process_request(
+            'create_project', project.id, body=body, headers=self.http_headers
+        )
+        return self.messages(res, content, "The project is already exist on server")
+
     def delete(self):
         pass
 
     def status(self):
         pass
 
-class IterationService:
+
+class IterationService(Service):
     """
     Provides services to interact with Project iteration, handle operaions of list, create and retrieve iteration Resources
     """
-    def __init__(self, base_url, usrname = None, apikey = None):
-        self.restclient = RestClient(base_url)
-        self.username = usrname
-        self.apikey = apikey
+    _fields = ['base_url', 'http_headers']
+
+    def __init__(self, *args, **kargs):
+        super(IterationService, self).__init__(*args, **kargs)
+
+    def disable_ssl_cert_validation(self):
+        self.restclient.disable_ssl_cert_validation()
 
     def get(self, projectid, iterationid):
         """
-        Retrieve a specified Iteration Resource on Flies server
+        Retrieve a specified Iteration Resource on Zanata server
         @param projectid: Id of Project Resource
         @param iterationid: Id of Iteration Resource
         @return: Iteration object
         @raise NoSuchProjectException:
         """
+        res, content = self.restclient.process_request('get_iteration', projectid, iterationid,
+                                                       headers=self.http_headers)
+        server_return = self.messages(res, content)
+        if 'status' in server_return:
+            if server_return['status'] == "Retired":
+                print("Warning: The project %s is retired!" % iterationid)
+        return Iteration(server_return)
 
-        res, content = self.restclient.request_get('/seam/resource/restv1/projects/p/%s/iterations/i/%s'%(projectid,iterationid))
-                
-        if res['status'] == '200' or res['status'] == '304':
-            return Iteration(json.loads(content))
-        elif res['status'] == '404':
-            raise NoSuchProjectException('Error 404', content)
-  
     def create(self, projectid, iteration):
         """
-        Create a Iteration Resource on Flies Server
+        Create a Iteration Resource on Zanata Server
         @param projectid: Id of Project Resource
         @param iteration: Iteration object
         @return: Success if status of response is 201
@@ -146,24 +137,51 @@ class IterationService:
         @raise NoSuchProjectException:
         @raise UnAuthorizedException:
         @raise BadRequestException:
-        """ 
-        headers = {}
-        headers['X-Auth-User'] = self.username
-        headers['X-Auth-Token'] = self.apikey
-         
-        body = '''{"name":"%s","id":"%s","description":"%s"}'''%(iteration.name, iteration.id, iteration.desc)
-        res, content = self.restclient.request_put('/seam/resource/restv1/projects/p/%s/iterations/i/%s'%(projectid,iteration.id), args=body, headers=headers)
-         
-        if res['status'] == '201':
-            return "Success"
-        elif res['status'] == '200':
-            raise ProjectExistException('Status 200', "The version is already exist on server")
-        elif res['status'] == '404':
-            raise NoSuchProjectException('Error 404', content)
-        elif res['status'] == '401':
-            raise UnAuthorizedException('Error 401', 'This operation is not authorized, please check username and apikey')
-        elif res['status'] == '405':
-            raise NotAllowedException('Error 405', 'The requested method is not allowed')
+        """
+        body = '''{"name":"%s","id":"%s","description":"%s"}''' % (iteration.name, iteration.id, iteration.desc)
+        res, content = self.restclient.process_request(
+            'create_iteration', projectid, iteration.id, body=body, headers=self.http_headers
+        )
+        return self.messages(res, content, "The Version is already exist on server")
 
     def delete(self):
         pass
+
+    def config(self, projectid, iterationid):
+        """
+        Retrieve project config from server
+        @param projectid: Id of Project Resource
+        @param iterationid: Id of Iteration Resource
+        @return: Project Config
+        @raise NoSuchProjectException
+        """
+        res, content = self.restclient.process_request('project_config', projectid, iterationid,
+                                                       headers=self.http_headers)
+        return self.messages(res, content)
+
+
+class LocaleService(Service):
+    """
+    Provides services to interact with Project Locales.
+    """
+    _fields = ['base_url', 'http_headers']
+
+    def __init__(self, *args, **kargs):
+        super(LocaleService, self).__init__(*args, **kargs)
+
+    def disable_ssl_cert_validation(self):
+        self.restclient.disable_ssl_cert_validation()
+
+    def get_locales(self, projectid, iterationid=None):
+        """
+        Retrieve a specified Project Locales on Zanata server
+        @param projectid: Id of Project Resource
+        @param iterationid: Id of Iteration Resource
+        @return: service return content
+        """
+        service = 'iteration_locales' if iterationid else 'project_locales'
+        res, content = self.restclient.process_request(
+            service, projectid, iterationid, headers=self.http_headers
+        )
+        server_return = self.messages(res, content)
+        return server_return

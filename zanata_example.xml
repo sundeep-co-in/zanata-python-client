@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <config xmlns="http://zanata.org/namespace/config/">
         <url>@ZANATA_SERVER@</url>
-        <project>@PROJECT_NAME@</project>
+        <project>@PROJECT_ID@</project>
         <project-version>@PROJECT_VERSION@</project-version>
         <locales>
             <locale>pt-BR</locale>
@@ -13,8 +13,7 @@
             <locale map-from="zh-CN">zh-Hans</locale>
             <locale map-from="zh-TW">zh-Hant</locale>
         </locales>
-        <python-client>
-            <dir>@SOURCE_DIR@</dir>
-        </python-client>
+        <src-dir>@SOURCE_DIR@</src-dir>
+        <trans-dir>@TRANS_DIR@</trans-dir>
 </config>
 

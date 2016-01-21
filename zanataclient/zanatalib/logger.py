@@ -1,5 +1,5 @@
-#vim:set et sts=4 sw=4: 
-# 
+# vim:set et sts=4 sw=4:
+#
 # Zanata Python Client
 #
 # Copyright (c) 2011 Jian Ni <jni@redhat.com>
@@ -17,36 +17,47 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the
-# Free Software Foundation, Inc., 59 Temple Place, Suite 330,
-# Boston, MA  02111-1307  USA
+# Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA  02110-1301, USA.
 __all__ = (
     "Logger",
 )
 
+
+class TextColour:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
 class Logger:
     def __init__(self):
-        self.enable_infoprefix = False
+        self.enable_infoprefix = True
         self.enable_warnprefix = True
         self.enable_errprefix = True
-        self.warn_prefix = 'warning: '
-        self.error_prefix = 'error: '
+        self.warn_prefix = '[WARN] '
+        self.error_prefix = '[ERROR] '
         self.info_prefix = '[INFO] '
 
     def info(self, message):
         if self.enable_infoprefix:
-            print self.info_prefix+message
+            print(self.info_prefix + message)
         else:
-            print message
+            print(message)
 
     def warn(self, message):
         if self.enable_warnprefix:
-            print self.warn_prefix+message
+            print(self.warn_prefix + message)
         else:
-            print message
+            print(message)
 
     def error(self, message):
         if self.enable_errprefix:
-            print self.error_prefix+message
+            print(self.error_prefix + message)
         else:
-            print message
-    
+            print(message)

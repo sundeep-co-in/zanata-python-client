@@ -1,6 +1,6 @@
-#vim:set et sts=4 sw=4: 
-#  
-# Flies Python Client
+# vim:set et sts=4 sw=4:
+#
+# Zanata Python Client
 #
 # Copyright (c) 2010 Jian Ni <jni@redhat.com>
 # Copyright (c) 2010 Red Hat, Inc.
@@ -17,9 +17,9 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the
-# Free Software Foundation, Inc., 59 Temple Place, Suite 330,
-# Boston, MA  02111-1307  USA
+# Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA  02110-1301, USA.
 
-from parseconfig import *
-from publicanutil import *
-from zanata import *
+from .parseconfig import *
+from .publicanutil import *
+from .zanata import *

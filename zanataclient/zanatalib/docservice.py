@@ -1,5 +1,5 @@
-#vim:set et sts=4 sw=4: 
-# 
+# vim:set et sts=4 sw=4:
+#
 # Zanata Python Client
 #
 # Copyright (c) 2011 Jian Ni <jni@redhat.com>
@@ -17,65 +17,35 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the
-# Free Software Foundation, Inc., 59 Temple Place, Suite 330,
-# Boston, MA  02111-1307  USA
+# Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA  02110-1301, USA.
 
 
 __all__ = (
-        "DocumentService",
-   )
+    "DocumentService",
+)
 
-try:
-    import json
-except ImportError:
-    import simplejson as json
-from error import InternalServerError
-from error import UnAuthorizedException
-from error import BadRequestBodyException
-from error import SameNameDocumentException
-from error import UnAvaliableResourceException
-from error import UnavailableServiceError
-from error import UnexpectedStatusException
+from .service import Service
 
-class DocumentService:    
-    def __init__(self, projects):
-        self.projects = projects
-    
+
+class DocumentService(Service):
+    _fields = ['projects', 'base_url', 'http_headers']
+
+    def __init__(self, *args, **kargs):
+        super(DocumentService, self).__init__(*args, **kargs)
+
     def get_file_list(self, projectid, iterationid):
-        res, content = self.projects.restclient.request_get('/seam/resource/restv1/projects/p/%s/iterations/i/%s/r'%(projectid, iterationid))
+        res, content = self.projects.restclient.process_request('list_files', projectid, iterationid,
+                                                                headers=self.http_headers)
+        files = self.messages(res, content)
+        filelist = [item.get('name') for item in files]
+        return filelist
 
-        if res['status'] == '200' or res['status'] == '304':
-            files = json.loads(content)
-            filelist = [item.get('name') for item in files]
-            return filelist
-        elif res['status'] == '500':
-            raise InternalServerError('Error 500', 'An internal server error happens')
-        elif res['status'] == '503':
-            raise UnavailableServiceError('Error 503', 'Service Temporarily Unavailable')
-        else:
-            raise UnexpectedStatusException('Error', 'Unexpected Status, failed to get file list')
-    
     def update_template(self, projectid, iterationid, file_id, resources, copytrans):
-        headers = {}
-        headers['X-Auth-User'] = self.projects.username
-        headers['X-Auth-Token'] = self.projects.apikey        
-        
-        ext = "?ext=gettext&ext=comment&copyTrans=%s"%copytrans
- 
-        res, content = self.projects.restclient.request_put('/seam/resource/restv1/projects/p/%s/iterations/i/%s/r/%s'%(projectid,iterationid,file_id), args=resources, headers=headers, extension=ext)
-         
-        if res['status'] == '201' or res['status'] == '200' or res['status'] == '301':
-            return True
-        elif res['status'] == '401':
-            raise UnAuthorizedException('Error 401', 'This operation is not authorized, please check username and apikey')
-        elif res['status'] == '400':
-            raise BadRequestBodyException('Error 400', 'Unable to read request body.')
-        elif res['status'] == '409':
-            raise SameNameDocumentException('Error 409', 'A document with same name already exists.')
-        elif res['status'] == '503':
-            raise UnavailableServiceError('Error 503', 'Service Temporarily Unavailable')
-        else:
-            raise UnexpectedStatusException('Error', 'Unexpected Status, failed to update')
+        ext = "?ext=gettext&ext=comment&copyTrans=%s" % copytrans
+        res, content = self.projects.restclient.process_request('update_template', projectid, iterationid, file_id,
+                                                                body=resources, headers=self.http_headers, extension=ext)
+        return self.messages(res, content)
 
     def commit_template(self, projectid, iterationid, resources, copytrans):
         """
@@ -88,120 +58,42 @@ class DocumentService:
         @raise BadRequestBodyException:
         @raise SameNameDocumentException:
         """
-        headers = {}
-        headers['X-Auth-User'] = self.projects.username
-        headers['X-Auth-Token'] = self.projects.apikey
-
-        ext = "?ext=gettext&ext=comment&copyTrans=%s"%copytrans
-  
-        res, content = self.projects.restclient.request_post('/seam/resource/restv1/projects/p/%s/iterations/i/%s/r'%(projectid,iterationid), args=resources, headers=headers, extension=ext)
-         
-        if res['status'] == '201' or res['status'] == '301':
-            return True
-        elif res['status'] == '401':
-            raise UnAuthorizedException('Error 401', 'This operation is not authorized, please check username and apikey')
-        elif res['status'] == '400':
-            raise BadRequestBodyException('Error 400', content)
-        elif res['status'] == '409':
-            raise SameNameDocumentException('Error 409', content)
-        elif res['status'] == '503':
-            raise UnavailableServiceError('Error 503', 'Service Temporarily Unavailable')
-        else:
-            raise UnexpectedStatusException('Error', 'Unexpected Status, failed to push')
+        ext = "?ext=gettext&ext=comment&copyTrans=%s" % copytrans
+        res, content = self.projects.restclient.process_request('commit_template', projectid, iterationid,
+                                                                body=resources, headers=self.http_headers, extension=ext)
+        return self.messages(res, content)
 
     def delete_template(self, projectid, iterationid, file_id):
-        headers = {}
-        headers['X-Auth-User'] = self.projects.username
-        headers['X-Auth-Token'] = self.projects.apikey    
-       
-        res, content = self.projects.restclient.request_delete('/seam/resource/restv1/projects/p/%s/iterations/i/%s/r/%s'%(projectid, iterationid, file_id), headers=headers)
-         
-        if res['status'] == '200' or res['status'] == '304':
-            return content
-        elif res['status'] == '404':
-            raise UnAvaliableResourceException('Error 404', 'The requested resource is not available')
-        elif res['status'] == '401':
-            raise UnAuthorizedException('Error 401', 'This operation is not authorized, please check username and apikey') 
-        elif res['status'] == '503':
-            raise UnavailableServiceError('Error 503', 'Service Temporarily Unavailable')
-        else:
-            raise UnexpectedStatusException('Error', 'Unexpected Status, failed to delete')
+        res, content = self.projects.restclient.process_request('delete_template', projectid, iterationid, file_id,
+                                                                headers=self.http_headers)
+        return self.messages(res, content)
 
     def retrieve_template(self, projectid, iterationid, file_id):
         ext = "?ext=gettext&ext=comment"
+        res, content = self.projects.restclient.process_request('retrieve_template', projectid, iterationid, file_id,
+                                                                headers=self.http_headers, extension=ext)
+        return self.messages(res, content)
 
-        res, content = self.projects.restclient.request_get('/seam/resource/restv1/projects/p/%s/iterations/i/%s/r/%s'%(projectid, iterationid, file_id), extension=ext)
-        headers = {}
-        headers['X-Auth-User'] = self.projects.username
-        headers['X-Auth-Token'] = self.projects.apikey 
-        
-        if res['status'] == '200' or res['status'] == '304':
-            return content
-        elif res['status'] == '404':
-            raise UnAvaliableResourceException('Error 404', 'The requested resource is not available')
-        elif res['status'] == '401':
-            raise UnAuthorizedException('Error 401', 'This operation is not authorized, please check username and apikey')       
-        elif res['status'] == '503':
-            raise UnavailableServiceError('Error 503', 'Service Temporarily Unavailable')
-        else:
-            raise UnexpectedStatusException('Error', 'Unexpected Status, failed to pull')
-
-    def retrieve_translation(self, lang, projectid, iterationid, file_id):
+    def retrieve_translation(self, lang, projectid, iterationid, file_id, skeletons):
         """
-        Get translation content of file from Flies server
+        Get translation content of file from Zanata server
         @param lang: language
         @param projectid: Id of project
         @param iterationid: Id of iteration
         @param file: name of document
         @return: translation content of document
         @raise UnAvaliableResourceException:
-        @raise UnAuthorizedException: 
+        @raise UnAuthorizedException:
         """
-        headers = {}
-        headers['X-Auth-User'] = self.projects.username
-        headers['X-Auth-Token'] = self.projects.apikey 
         ext = "?ext=gettext&ext=comment"
-
-        res, content = self.projects.restclient.request_get('/seam/resource/restv1/projects/p/%s/iterations/i/%s/r/%s/translations/%s'%(projectid, iterationid, file_id, lang), extension=ext)
-                
-        if res['status'] == '200' or res['status'] == '304':
-            return content
-        elif res['status'] == '404':
-            raise UnAvaliableResourceException('Error 404', 'The requested resource is not available')
-        elif res['status'] == '401':
-            raise UnAuthorizedException('Error 401', 'This operation is not authorized, please check username and apikey')
-        elif res['status'] == '400':
-            raise BadRequestBodyException('Error 400', content)
-        elif res['status'] == '403':
-            raise UnexpectedStatusException('Error 403', content)
-        elif res['status'] == '503':
-            raise UnavailableServiceError('Error 503', 'Service Temporarily Unavailable')
-        else:
-            raise UnexpectedStatusException('Error', 'Unexpected Status, failed to retrieve translation')
+        if skeletons:
+            ext = ext + "&skeletons=true"
+        res, content = self.projects.restclient.process_request('retrieve_translation', projectid, iterationid, file_id, lang,
+                                                                headers=self.http_headers, extension=ext)
+        return self.messages(res, content)
 
     def commit_translation(self, projectid, iterationid, fileid, localeid, resources, merge):
-        headers = {}
-        headers['X-Auth-User'] = self.projects.username
-        headers['X-Auth-Token'] = self.projects.apikey
-
-        ext = "?ext=gettext&ext=comment&merge=%s"%merge       
-        
-        res, content = self.projects.restclient.request_put('/seam/resource/restv1/projects/p/%s/iterations/i/%s/r/%s/translations/%s'%(projectid,iterationid,fileid,localeid), args=resources, headers=headers, extension=ext)
-
-        if res['status'] == '200':
-            if content:
-                return content+", Try running publican update_po (or msgmerge) to ensure your PO files are in sync with your POT files"
-        elif res['status'] == '301':
-            return "HTTP redirect, please update the server URL to new URL"
-        elif res['status'] == '401':
-            raise UnAuthorizedException('Error 401', 'This operation is not authorized, please check username and apikey')
-        elif res['status'] == '400':
-            msg = " If 'Unexpected target', try running publican update_po (or msgmerge) to ensure your PO files are in sync with your POT files"
-            raise BadRequestBodyException('Error 400', content+msg)
-        elif res['status'] == '503':
-            raise UnavailableServiceError('Error 503', 'Service Temporarily Unavailable')
-        elif res['status'] == '403':
-            raise UnexpectedStatusException('Error 403', content)
-        else:
-            raise UnexpectedStatusException('Error', 'Unexpected Status, failed to push translation to zanata server')
-
+        ext = "?ext=gettext&ext=comment&merge=%s" % merge
+        res, content = self.projects.restclient.process_request('commit_translation', projectid, iterationid, fileid, localeid,
+                                                                body=resources, headers=self.http_headers, extension=ext)
+        return self.messages(res, content)

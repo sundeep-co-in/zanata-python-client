@@ -1,4 +1,4 @@
-#vim:set et sts=4 sw=4:
+# vim: set et sts=4 sw=4:
 #
 # Zanata Python Client
 #
@@ -17,10 +17,10 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the
-# Free Software Foundation, Inc., 59 Temple Place, Suite 330,
-# Boston, MA  02111-1307  USA
+# Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA  02110-1301, USA.
 
-# Base on James Gardner's CommandTool v0.3.2, modified for python client requirement 
+# Base on James Gardner's CommandTool v0.3.2, modified for python client requirement
 # http://jimmyg.org/blog/2009/python-command-line-interface-%28cli%29-with-sub-commands.html
 # Copyright (C) 2009 James Gardner - http://jimmyg.org/
 
@@ -28,13 +28,16 @@ import getopt
 import sys
 import os
 
+
 class OptionConfigurationError(Exception):
     pass
+
 
 def makeHandler(handler):
     def make(state=None):
         return handler
     return make
+
 
 def option_names_from_option_list(option_list):
     names = []
@@ -45,9 +48,10 @@ def option_names_from_option_list(option_list):
             names.append(name)
     return names
 
+
 def strip_docstring(docstring, tabstop=4):
     docstring = docstring.replace('\r', '\n')
-    min = len(docstring)
+    minimum = len(docstring)
     lines = docstring.split('\n')
     for line in lines:
         if line:
@@ -62,26 +66,27 @@ def strip_docstring(docstring, tabstop=4):
                     chars += tabstop
                 else:
                     break
-            if chars < min:
-                min = chars
-    # Now we know the amount of whitespace for the line with the least 
+            if chars < minimum:
+                minimum = chars
+    # Now we know the amount of whitespace for the line with the least
     # we can regenerate the final docstring whitespace
     final = []
     for line in lines:
         if not line:
             final.append('')
         else:
-            final.append(line[min:])
+            final.append(line[minimum:])
     return '\n'.join(final)
+
 
 def extract_metavars(list_of_option_sets):
     metavars = {}
     for option_set in list_of_option_sets:
         for internal_name, option_list in option_set.items():
             for option in option_list:
-                if option.has_key('metavar'):
+                if 'metavar' in option:
                     metavar = option['metavar']
-                    if metavars.has_key(metavar):
+                    if metavar in metavars:
                         if metavars[metavar][1] != option['value']:
                             raise getopt.GetoptError(
                                 'The options %r and %r must have the same '
@@ -94,9 +99,10 @@ def extract_metavars(list_of_option_sets):
                             metavars[metavar] = (option['name'], option['value'])
     return metavars
 
+
 def parse_command_line(option_sets, subcmds=None, sys_args=None):
     program_opts, command_opts, command, args = _parse_command_line(
-        option_sets, 
+        option_sets,
         subcmds,
         sys_args,
     )
@@ -104,6 +110,7 @@ def parse_command_line(option_sets, subcmds=None, sys_args=None):
     # but ignore the extracted value
     metavars = extract_metavars([program_opts, command_opts])
     return program_opts, command_opts, command, args
+
 
 def _parse_command_line(option_sets, subcmds=None, sys_args=None):
     if sys_args is not None:
@@ -121,50 +128,50 @@ def _parse_command_line(option_sets, subcmds=None, sys_args=None):
     for internal_name, option_list in option_sets.items():
         if internal_name in used_internal:
             raise OptionConfigurationError(
-                'The internal option %r has already been configured'% (
+                'The internal option %r has already been configured' % (
                     internal_name,
                 )
             )
         else:
             used_internal.append(internal_name)
 
-        for option in option_list: 
+        for option in option_list:
             option['internal'] = internal_name
             if option['type'] not in ['shared', 'program', 'command']:
                 raise OptionConfigurationError(
                     'Unknown type %r for option %r' % (
-                         option['type'], 
-                         option['internal']
+                        option['type'],
+                        option['internal']
                     )
                 )
             # Now set up the long and short options
-            if option.has_key('short'):
+            if 'short' in option:
                 for short in option['short']:
-                    if option.has_key('metavar'):
-                        short_options += short.strip(':-')+':'
+                    if 'metavar' in option:
+                        short_options += short.strip(':-') + ':'
                     else:
                         short_options += short.strip(':-')
-                    if by_option.has_key(short.strip(':')):
+                    if short.strip(':') in by_option:
                         raise OptionConfigurationError(
-                            'The short option %r is already being used'%short
+                            'The short option %r is already being used' % short
                         )
                     else:
                         new = option.copy()
                         new['name'] = short.strip(':')
-                        by_option[short.strip(':')] = new 
-            for long in option['long']:
-                if option.has_key('metavar'):
-                    long_options.append(long.strip('-=')+'=')
+                        by_option[short.strip(':')] = new
+            for longopt in option['long']:
+                if 'metavar' in option:
+                    long_options.append(longopt.strip('-=') + '=')
                 else:
-                    long_options.append(long.strip('-='))
-                if by_option.has_key(long.strip('=')):
+                    long_options.append(longopt.strip('-='))
+                if longopt.strip('=') in by_option:
                     raise OptionConfigurationError(
-                        'The long option %r is already being used'%long
+                        'The long option %r is already being used' % longopt
                     )
                 else:
                     new = option.copy()
-                    new['name'] = long.strip('=')
-                    by_option[long.strip('=')] = new
+                    new['name'] = longopt.strip('=')
+                    by_option[longopt.strip('=')] = new
 
     # Now we know the options are valid, parse them
     opts, args = getopt.gnu_getopt(sys_args, short_options, long_options)
@@ -178,7 +185,7 @@ def _parse_command_line(option_sets, subcmds=None, sys_args=None):
                 internal = by_option[opt[0]]['internal']
                 new = by_option[opt[0]].copy()
                 new['value'] = opt[1]
-                if program_options.has_key(internal):
+                if internal in program_options:
                     program_options[internal].append(new)
                 else:
                     program_options[internal] = [new]
@@ -192,18 +199,18 @@ def _parse_command_line(option_sets, subcmds=None, sys_args=None):
     else:
         orig_command = args[0]
         command = None
-        sub = args[1:] 
+        sub = args[1:]
         for name, subcmd in subcmds.items():
             if orig_command == name and subcmd:
                 if sub:
                     if sub[0] in subcmd:
-                        command = orig_command+'_'+sub[0]
+                        command = orig_command + '_' + sub[0]
                         args = sub[1:]
                     else:
-                        print "Unknown command!"
+                        print("Unknown command!")
                         sys.exit(1)
                 else:
-                    print "Please complete the command!"
+                    print("Please complete the command!")
                     sys.exit(1)
 
             if orig_command == name and not subcmd:
@@ -211,7 +218,7 @@ def _parse_command_line(option_sets, subcmds=None, sys_args=None):
                 args = sub
 
         if not command:
-            print "Unknown command!"
+            print("Unknown command!")
             sys.exit(1)
 
         # Get the extra data about the options used this time:
@@ -226,7 +233,7 @@ def _parse_command_line(option_sets, subcmds=None, sys_args=None):
             internal = by_option[opt[0]]['internal']
             new = by_option[opt[0]].copy()
             new['value'] = opt[1]
-            if all_options.has_key(internal):
+            if internal in all_options:
                 all_options[internal].append(new)
             else:
                 all_options[internal] = [new]
@@ -234,7 +241,7 @@ def _parse_command_line(option_sets, subcmds=None, sys_args=None):
         if option_types['shared']:
             for k, vs in option_types['shared'].items():
                 for v in vs:
-                    if option_types['command'].has_key(k):
+                    if k in option_types['command']:
                         option_types['command'][k].append(v)
                     else:
                         option_types['command'][k] = [v]
@@ -249,55 +256,57 @@ def _parse_command_line(option_sets, subcmds=None, sys_args=None):
         )
         return result
 
+
 def handle_program(
     command_handler_factories,
-    option_sets, 
-    program_options, 
-    command_options, 
-    command, 
+    option_sets,
+    program_options,
+    command_options,
+    command,
     args,
     program_name,
-    help = None,
+    help=None,
     existing=None,
 ):
     """
     usage: %(program)s [PROGRAM_OPTIONS] COMMAND [OPTIONS] ARGS
 
     Try %(program)s COMMAND --help' for help on a specific command.
+
     The following are valid zanata commands:
+    push
+    pull
     list
     project info
     project create
     version info
     version create
-    publican push
-    publican pull
-    po push
-    po pull
-    push 
-    pull
-    glossary push  
+    glossary push
+    publican push   (deprecated: use "push" with project type "podir")
+    publican pull   (deprecated: use "pull" with project type "podir")
+    po push         (deprecated: use "push" with project type "gettext")
+    po pull         (deprecated: use "pull" with project type "gettext")
     """
     if existing is None:
-        existing={}
+        existing = {}
     # First, are they asking for program help?
-    if program_options.has_key('help'):
+    if 'help' in program_options:
         # if so provide it no matter what other options are given
         if help and hasattr(help, '__program__'):
-            print strip_docstring(
+            print(strip_docstring(
                 help.__program__ % {
                     'program': program_name,
                 }
-            )
+            ))
         else:
-            print strip_docstring(
+            print(strip_docstring(
                 handle_program.__doc__ % {
                     'program': program_name,
                 }
-            )
+            ))
         sys.exit(0)
-    elif program_options.has_key('client_version'):
-        #Retrieve the version of client
+    elif 'client_version' in program_options:
+        # Retrieve the version of client
         version_number = ""
         path = os.path.dirname(os.path.realpath(__file__))
         version_file = os.path.join(path, 'VERSION-FILE')
@@ -307,31 +316,31 @@ def handle_program(
             version.close()
             version_number = client_version.rstrip().strip('version: ')
         except IOError:
-            print "Please run VERSION-GEN or 'make install' to generate VERSION-FILE"
+            print("Please run VERSION-GEN or 'make install' to generate VERSION-FILE")
             version_number = "UNKNOWN"
 
-        print "zanata python client version: %s"%version_number
+        print("zanata python client version: %s" % version_number)
     else:
         if not command:
             raise getopt.GetoptError("No command specified.")
         # Are they asking for command help:
-        if command_options.has_key('help'):
+        if 'help' in command_options:
             # if so provide it no matter what other options are given
-            if not command_handler_factories.has_key(command):
-                raise getopt.GetoptError('No such command %r'%command)
+            if command not in command_handler_factories:
+                raise getopt.GetoptError('No such command %r' % command)
             if hasattr(help, command):
-                print strip_docstring(
+                print(strip_docstring(
                     getattr(help, command) % {
                         'program': program_name,
                     }
-                )
+                ))
             else:
                 fn = command_handler_factories[command]()
-                print strip_docstring(
+                print(strip_docstring(
                     (fn.__doc__ or 'No help') % {
                         'program': program_name,
                     }
-                )
+                ))
             sys.exit(0)
 
         # Now handle the command options and arguments

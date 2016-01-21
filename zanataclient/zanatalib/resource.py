@@ -20,10 +20,27 @@
 # Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 # Boston, MA  02110-1301, USA.
 
-from .resource import *
-from .docservice import *
-from .error import *
-from .projectservice import *
-from .projectutils import *
-from .versionservice import *
-from .logger import *
+
+__all__ = (
+    "ZanataResource",
+)
+
+from .docservice import DocumentService
+from .projectservice import ProjectService
+from .versionservice import VersionService
+from .glossaryservice import GlossaryService
+from .statservice import StatService
+
+
+class ZanataResource:
+    def __init__(self, base_url, http_headers):
+        self.base_url = base_url
+        self.projects = ProjectService(base_url, http_headers)
+        self.documents = DocumentService(self.projects, base_url, http_headers)
+        self.version = VersionService(base_url, http_headers)
+        self.glossary = GlossaryService(base_url, http_headers)
+        self.stats = StatService(base_url, http_headers)
+
+    def disable_ssl_cert_validation(self):
+        self.projects.disable_ssl_cert_validation()
+        self.version.disable_ssl_cert_validation()

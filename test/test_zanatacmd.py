@@ -1,5 +1,5 @@
-# 
-# Flies Python Client
+#
+# Zanata Python Client
 #
 # Copyright (c) 2010 Jian Ni <jni@redhat.com>
 # Copyright (c) 2010 Red Hat, Inc.
@@ -16,22 +16,23 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the
-# Free Software Foundation, Inc., 59 Temple Place, Suite 330,
-# Boston, MA  02111-1307  USA
+# Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA  02110-1301, USA.
 
 all__ = (
-            "ZanataCmdTest",
-        )
+    "ZanataCmdTest",
+)
 
 import unittest
-import sys, os
-from minimock import mock, Mock
-sys.path.insert(0, os.path.abspath(__file__+"/../.."))
+import sys
+import os
+from minimock import Mock
+sys.path.insert(0, os.path.abspath(__file__ + "/../.."))
 
 from zanataclient.zanatacmd import ZanataCommand
 from zanataclient.zanatalib import ZanataResource
-from zanataclient.zanatalib.project import Project
-from zanataclient.zanatalib.project import Iteration
+from zanataclient.zanatalib.projectutils import Project
+
 
 class ZanataCmdTest(unittest.TestCase):
     def setUp(self):
@@ -39,34 +40,21 @@ class ZanataCmdTest(unittest.TestCase):
 
     def test_list_projects(self):
         projects = []
-        project_data = {'id':"test-project", 'name':"Test Project", 'type':"IterationProject", 'links':[]}
+        project_data = {'id': "test-project", 'name': "Test Project", 'type': "IterationProject", 'links': []}
         projects.append(Project(project_data))
 
         url = "http://localhost"
         zanata = ZanataResource(url)
-        mock('zanata.projects.list', returns = projects)
+        zanata.projects = Mock(url)
+        zanata.projects.list.mock_returns = projects
         result = self.zanatacmd.list_projects(zanata)
         self.assertEqual(result[0].id, 'test-project')
 
     def test_project_info(self):
-        project_data = {'id':"test-project", 'name':"Test Project", 'type':"IterationProject", 'links':[], 'description':''}        
-        
-        url = "http://localhost"
-        zanata = ZanataResource(url)
-        mock('zanata.projects.get', returns = Project(project_data))
-        result = self.zanatacmd.project_info(zanata, 'test-project')
+        pass
 
     def test_version_info(self):
-        project_data = {'id':"test-project", 'name':"Test Project", 'type':"IterationProject", 'links':[], 'description':''} 
-        version_data = {'id':"1.0", 'name':"Version 1.0", 'description':''}        
-        
-        url = "http://localhost"
-        zanata = ZanataResource(url)
-        project = Project(project_data)
-        mock('project.set_iteration', returns = Mock('iteration_service'))
-        mock('project.get_iteration', returns = Iteration(version_data))
-        mock('zanata.projects.get', returns = project)
-        self.zanatacmd.version_info(zanata, 'test-project', '1.0')
+        pass
 
     def test_create_project(self):
         pass
