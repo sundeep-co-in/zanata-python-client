@@ -32,7 +32,7 @@ middle_url = '/seam/resource/restv1'
 http_methods = ('GET', 'POST', 'PUT', 'DELETE', 'HEAD', 'PATCH', 'OPTIONS')
 media_types = ('application/json', 'application/vnd.zanata.projects+json', 'application/vnd.zanata.Version+json',
                'application/vnd.zanata.project.iteration+json', 'application/vnd.zanata.glossary+json',
-               'application/vnd.zanata.project.locales+json', 'application/xml')
+               'application/vnd.zanata.project.locales+json', 'application/xml', 'multipart/form-data')
 
 # based on https://zanata.ci.cloudbees.com/job/zanata-api-site/site/zanata-common-api/rest-api-docs/index.html
 # please add, modify resource details here, and make entry in service-to-resource mappings and in zpc_services
@@ -40,7 +40,16 @@ resource_config_dict = {
     'AccountResource': OrderedDict(),
     'AsynchronousProcessResource': OrderedDict(),
     'CopyTransResource': OrderedDict(),
-    'FileResource': OrderedDict(),
+    'FileResource': OrderedDict([
+        ('/file/source/{projectSlug}/{iterationSlug}', {
+            http_methods[1]: {
+                'path_params': ('projectSlug', 'iterationSlug'),
+                'query_params': None,
+                'request_media_type': media_types[7],
+                'response_media_type': media_types[6],
+            },
+        })
+    ]),
     'GlossaryResource': OrderedDict([
         ('/glossary', {
             http_methods[2]: {
@@ -226,6 +235,7 @@ proj_trans_stats = resource('StatisticsResource', list(resource_config_dict['Sta
 doc_trans_stats = resource('StatisticsResource', list(resource_config_dict['StatisticsResource'].keys())[1], http_methods[0])
 project_config = resource('ProjectIterationResource', list(resource_config_dict['ProjectIterationResource'].keys())[1],
                           http_methods[0])
+file_upload = resource('FileResource', list(resource_config_dict['FileResource'].keys())[0], http_methods[1])
 # zanata-python-client operates on services listed here
 zpc_services = {
     'server_version': server_version,
@@ -248,6 +258,7 @@ zpc_services = {
     'proj_trans_stats': proj_trans_stats,
     'doc_trans_stats': doc_trans_stats,
     'project_config': project_config,
+    'file_upload': file_upload,
 }
 
 

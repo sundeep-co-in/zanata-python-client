@@ -302,6 +302,13 @@ option_sets = {
             long=['--docid'],
             metavar='DOCID',
         ),
+    ],
+    'chunksize': [
+        dict(
+            type='command',
+            long=['--chunk-size'],
+            metavar='CHUNKSIZE',
+        ),
     ]
 }
 
@@ -519,6 +526,9 @@ def po_push(command_options, args):
 
     Options:
         --apikey            : api key of user (defaults to zanata.ini value)
+        --chunk-size        : Maximum size, in bytes, of document chunks to transmit. Documents smaller
+                                than this size will be transmitted in a single request, larger documents
+                                will be sent over multiple requests.
         --copytrans         : ask server to copy translations from other versions
         --dir               : the path of the folder that contains pot files and po files,
                                 no need to specify --srcdir and --transdir if --dir option specified
@@ -571,6 +581,9 @@ def publican_push(command_options, args):
 
     Options:
         --apikey            : api key of user (defaults to zanata.ini value)
+        --chunk-size        : Maximum size, in bytes, of document chunks to transmit. Documents smaller
+                                than this size will be transmitted in a single request, larger documents
+                                will be sent over multiple requests.
         --copytrans         : ask server to copy translations from other versions
         --dir               : the path of the folder that contains pot folder and locale folders,
                                 no need to specify --srcdir and --transdir if --dir option specified
@@ -601,6 +614,9 @@ def push(command_options, args):
 
     Options:
         --apikey            : api key of user (defaults to zanata.ini value)
+        --chunk-size        : Maximum size, in bytes, of document chunks to transmit. Documents smaller
+                                than this size will be transmitted in a single request, larger documents
+                                will be sent over multiple requests.
         --disable-ssl-cert  : disable ssl certificate validation
         --lang              : language list (defaults to zanata.xml locales)
         --merge             : override merge algorithm: auto (default) or import

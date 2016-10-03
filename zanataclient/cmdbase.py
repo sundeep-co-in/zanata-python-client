@@ -276,6 +276,9 @@ class PushPull(CommandsBase):
         self.file_mapping_rules = self.context_data['file_mapping_rules'] \
             if 'file_mapping_rules' in self.context_data else None
 
+        # set chunk_size either to some value or None
+        self.chunk_size = self.context_data['chunksize'] if 'chunksize' in self.context_data else None
+
     # Functions in PoPush and GenericPush get tmlfile,file list
     def get_files(self):
         deletefiles = False

@@ -120,22 +120,26 @@ class ZanataCommand:
         except ZanataException as e:
             self.log.error(str(e))
 
-    def update_template(self, project_id, iteration_id, filename, body, copytrans):
+    def update_template(self, project_id, iteration_id, filename, body, copytrans, chunksize):
         if '/' in filename:
             request_name = filename.replace('/', ',')
         else:
             request_name = filename
 
         try:
-            result = self.zanata_resource.documents.update_template(project_id, iteration_id, request_name, body, copytrans)
+            result = self.zanata_resource.documents.update_template(
+                project_id, iteration_id, request_name, body, copytrans, chunksize
+            )
             if result:
                 self.log.info("Successfully updated template %s on the server" % filename)
         except ZanataException as e:
             self.log.error(str(e))
 
-    def commit_translation(self, project_id, iteration_id, request_name, pofile, lang, body, merge):
+    def commit_translation(self, project_id, iteration_id, request_name, pofile, lang, body, merge, chunksize):
         try:
-            result = self.zanata_resource.documents.commit_translation(project_id, iteration_id, request_name, lang, body, merge)
+            result = self.zanata_resource.documents.commit_translation(
+                project_id, iteration_id, request_name, lang, body, merge, chunksize
+            )
             if result:
                 self.log.warn(result)
             self.log.info("Successfully pushed translation %s to the Zanata server" % pofile)
@@ -301,7 +305,7 @@ class ZanataCommand:
             self.log.error(str(e))
 
     def import_po(self, potfile, trans_folder, project_id, iteration_id, lang_list, locale_map,
-                  merge, project_type, file_mapping_rules):
+                  merge, project_type, file_mapping_rules, chunksize):
         sub_dir = ""
         publicanutil = PublicanUtility()
 
@@ -339,10 +343,10 @@ class ZanataCommand:
                 self.log.error("No content or all entries are obsolete in %s" % pofile)
                 sys.exit(1)
 
-            self.commit_translation(project_id, iteration_id, request_name, pofile, remote_lang, body, merge)
+            self.commit_translation(project_id, iteration_id, request_name, pofile, remote_lang, body, merge, chunksize)
 
     def push_trans_command(self, transfolder, project_id, iteration_id, lang_list, locale_map,
-                           project_type, merge, file_mapping_rules):
+                           project_type, merge, file_mapping_rules, chunksize):
         filelist = ""
         publicanutil = PublicanUtility()
 
@@ -394,10 +398,11 @@ class ZanataCommand:
                     self.log.error("No content or all entries are obsolete in %s" % sub_dir)
                     sys.exit(1)
 
-                self.commit_translation(project_id, iteration_id, request_name, pofile, remote_lang, body, merge)
+                self.commit_translation(project_id, iteration_id, request_name, pofile,
+                                        remote_lang, body, merge, chunksize)
 
-    def push_command(self, file_list, srcfolder, project_id, iteration_id, copytrans, plural_support=False,
-                     import_param=None, file_mapping_rules=None):
+    def push_command(self, file_list, srcfolder, project_id, iteration_id, copytrans, chunksize,
+                     plural_support=False, import_param=None, file_mapping_rules=None):
         """
         Push the content of publican files to a Project version on Zanata server
         @param args: name of the publican file
@@ -412,7 +417,7 @@ class ZanataCommand:
                 break
             body, filename = publicanutil.potfile_to_json(filepath, srcfolder)
             try:
-                result = self.update_template(project_id, iteration_id, filename, body, copytrans)
+                result = self.update_template(project_id, iteration_id, filename, body, copytrans, chunksize)
                 if result:
                     self.log.info("Successfully pushed %s to the server" % filepath)
             except UnAuthorizedException as e:
@@ -436,7 +441,7 @@ class ZanataCommand:
                 locale_map = import_param['locale_map']
 
                 self.import_po(filename, transdir, project_id, iteration_id, lang_list, locale_map,
-                               merge, project_type, file_mapping_rules)
+                               merge, project_type, file_mapping_rules, chunksize)
 
     def pull_command(self, locale_map, project_id, iteration_id, filedict, output, project_type, skeletons, mapping_rules):
         """

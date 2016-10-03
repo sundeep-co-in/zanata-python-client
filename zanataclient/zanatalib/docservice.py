@@ -42,10 +42,13 @@ class DocumentService(Service):
         filelist = [item.get('name') for item in files]
         return filelist
 
-    def update_template(self, projectid, iterationid, file_id, resources, copytrans):
+    def update_template(self, projectid, iterationid, file_id, resources, copytrans, chunksize):
+
+        resource = 'file_upload' if chunksize else 'update_template'
+
         ext = "?ext=gettext&ext=comment&copyTrans=%s" % copytrans
         res, content = self.projects.restclient.process_request(
-            'update_template', projectid, iterationid, file_id, body=self._to_unicode(resources),
+            resource, projectid, iterationid, file_id, body=self._to_unicode(resources),
             headers=self.http_headers, extension=ext
         )
         return self.messages(res, content)
@@ -103,7 +106,7 @@ class DocumentService(Service):
         )
         return self.messages(res, content)
 
-    def commit_translation(self, projectid, iterationid, fileid, localeid, resources, merge):
+    def commit_translation(self, projectid, iterationid, fileid, localeid, resources, merge, chunksize):
         ext = "?ext=gettext&ext=comment&merge=%s" % merge
         res, content = self.projects.restclient.process_request(
             'commit_translation', projectid, iterationid, fileid, localeid, body=self._to_unicode(resources),

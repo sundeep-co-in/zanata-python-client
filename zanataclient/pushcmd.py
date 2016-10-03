@@ -66,7 +66,7 @@ class GenericPush(PushPull):
             lang_list = self.get_lang_list()
             locale_map = self.context_data.get('locale_map')
             self.zanatacmd.push_trans_command(transfolder, self.project_id, self.version_id, lang_list, locale_map,
-                                              project_type, merge, self.file_mapping_rules)
+                                              project_type, merge, self.file_mapping_rules, self.chunk_size)
             sys.exit(0)
 
         if not os.path.isdir(tmlfolder):
@@ -78,9 +78,9 @@ class GenericPush(PushPull):
 
         folder = None
         if project_type == 'podir':
-            log.info("POT directory (originals):%s" % tmlfolder)
+            log.info("POT directory (originals): %s" % tmlfolder)
         elif project_type == 'gettext':
-            log.info("PO directory (originals):%s" % tmlfolder)
+            log.info("PO directory (originals): %s" % tmlfolder)
             folder = tmlfolder
 
         if pushtrans is None:
@@ -93,10 +93,11 @@ class GenericPush(PushPull):
             log.info("Send local translation: True")
             import_param = self.get_importparam(project_type, folder)
             self.zanatacmd.push_command(filelist, tmlfolder, self.project_id, self.version_id, self.copytrans,
-                                        self.plural_support, import_param, self.file_mapping_rules)
+                                        self.chunk_size, self.plural_support, import_param, self.file_mapping_rules)
         else:
             log.info("Send local translation: False")
-            self.zanatacmd.push_command(filelist, tmlfolder, self.project_id, self.version_id, self.copytrans, self.plural_support)
+            self.zanatacmd.push_command(filelist, tmlfolder, self.project_id, self.version_id, self.copytrans,
+                                        self.chunk_size, self.plural_support)
 
 
 class PublicanPush(PushPull):
@@ -123,10 +124,11 @@ class PublicanPush(PushPull):
         if importpo:
             import_param = self.get_importparam("podir", tmlfolder)
             self.zanatacmd.push_command(filelist, tmlfolder, self.project_id, self.version_id, self.copytrans,
-                                        self.plural_support, import_param, self.file_mapping_rules)
+                                        self.chunk_size, self.plural_support, import_param, self.file_mapping_rules)
         else:
             log.info("Importing source documents only")
-            self.zanatacmd.push_command(filelist, tmlfolder, self.project_id, self.version_id, self.copytrans, self.plural_support)
+            self.zanatacmd.push_command(filelist, tmlfolder, self.project_id, self.version_id, self.copytrans,
+                                        self.chunk_size, self.plural_support)
 
 
 class PoPush(PushPull):
@@ -154,6 +156,7 @@ class PoPush(PushPull):
 
         if importpo:
             self.zanatacmd.push_command(filelist, tmlfolder, self.project_id, self.version_id, self.copytrans,
-                                        self.plural_support, import_param, self.file_mapping_rules)
+                                        self.chunk_size, self.plural_support, import_param, self.file_mapping_rules)
         else:
-            self.zanatacmd.push_command(filelist, tmlfolder, self.project_id, self.version_id, self.copytrans, self.plural_support)
+            self.zanatacmd.push_command(filelist, tmlfolder, self.project_id, self.version_id, self.copytrans,
+                                        self.chunk_size, self.plural_support)

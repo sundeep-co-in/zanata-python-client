@@ -189,6 +189,9 @@ class RestClient(object):
             service_details.resource.format(**dict(zip(service_details.path_params, args)))
             if args else service_details.resource
         )
+
+        import pdb; pdb.set_trace()
+
         # initiate service call
         rest_handle = RestHandle(
             self.base_url, resource, service_details.http_method,
